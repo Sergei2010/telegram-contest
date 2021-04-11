@@ -1,0 +1,25 @@
+{
+  "name": "telegram-contest",
+  "version": "1.0.0",
+  "description": "",
+  "main": "data.js",
+  "scripts": {
+    "serve": "parcel ./src/index.html -p 5500",
+    "build": "parcel build ./index.html"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sergei2010/telegram-contest.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Sergei2010/telegram-contest/issues"
+  },
+  "homepage": "https://github.com/Sergei2010/telegram-contest#readme",
+  "devDependencies": {
+    "parcel-bundler": "^1.12.5",
+    "sass": "^1.32.8"
+  }
+}
