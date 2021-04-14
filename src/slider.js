@@ -1,4 +1,14 @@
-import { css, boundaries, toCoords, line } from './utils'
+import {
+    css,
+    boundaries,
+    toCoords,
+    line,
+    computeYRatio,
+    computeXRatio,
+} from './utils'
+
+function noop() {}
+
 const HEIGHT = 40
 const DPI_HEIGHT = HEIGHT * 2
 
@@ -7,6 +17,7 @@ export function sliderChart(root, data, DPI_WIDTH) {
     const MIN_WIDTH = WIDTH * 0.05
     const canvas = root.querySelector('canvas')
     const ctx = canvas.getContext('2d')
+    let nextFn = noop
     canvas.width = DPI_WIDTH
     canvas.height = DPI_HEIGHT
     css(canvas, {
@@ -18,6 +29,10 @@ export function sliderChart(root, data, DPI_WIDTH) {
     const $right = root.querySelector('[data-el="right"]')
     const $window = root.querySelector('[data-el="window"]')
 
+    function next() {
+        nextFn(getPosition())
+    }
+
     function mousedown(event) {
         const type = event.target.dataset.type
         const dimensions = {
@@ -26,35 +41,37 @@ export function sliderChart(root, data, DPI_WIDTH) {
             width: parseInt($window.style.width),
         }
 
-        if(type === 'window') {
+        if (type === 'window') {
             const startX = event.pageX
-            document.onmousemove = (e) => {
+            document.onmousemove = e => {
                 const delta = startX - e.pageX
-                if(delta === 0) {
+                if (delta === 0) {
                     return
                 }
-
                 const left = dimensions.left - delta
                 const right = WIDTH - left - dimensions.width
 
                 setPosition(left, right)
+                next()
             }
         } else if (type === 'left' || type === 'right') {
             const startX = event.pageX
             document.onmousemove = (e) => {
                 const delta = startX - e.pageX
-                if(delta === 0) {
+                if (delta === 0) {
                     return
                 }
-                if(type === 'left') {
+
+                if (type === 'left') {
                     const left = WIDTH - (dimensions.width + delta) - dimensions.right
                     const right = WIDTH - (dimensions.width + delta) - left
                     setPosition(left, right)
                 } else {
-                    const right = WIDTH - (dimensions.width + delta) - dimensions.left
+                    const right = WIDTH - (dimensions.width - delta) - dimensions.left
                     setPosition(dimensions.left, right)
                 }
-
+                next()
+            }
         }
     }
 
@@ -71,33 +88,30 @@ export function sliderChart(root, data, DPI_WIDTH) {
     function setPosition(left, right) {
         const w = WIDTH - right - left
 
-        if (w < MIN_WIDTH) {
-            css($window, { width: MIN_WIDTH + 'px'})
+        if (w  < MIN_WIDTH) {
+            css($window, { width: MIN_WIDTH + 'px' })
             return
         }
 
-        if(left < 0) {
+        if (left < 0) {
             css($window, { left: '0px' })
-            css($left, { width: '0px' })
+            css($left, {width: '0px'})
             return
         }
 
-        if(right < 0) {
+        if (right < 0) {
             css($window, { right: '0px' })
-            css($right, { right: '0px' })
+            css($right, {width: '0px'})
             return
         }
 
-        css($window, {
+        css($window, { 
             width: w + 'px',
             left: left + 'px',
             right: right + 'px',
         })
-
         css($right, { width: right + 'px' })
         css($left, { width: left + 'px' })
-
-
     }
 
     function getPosition() {
@@ -105,20 +119,27 @@ export function sliderChart(root, data, DPI_WIDTH) {
         const right = WIDTH - parseInt($right.style.width)
 
         return [
-            left * 100 / width,
-            right * 100 / width,
+            (left * 100) / WIDTH,
+            (right * 100) / WIDTH,
         ]
     }
 
     const [yMin, yMax] = boundaries(data)
-    const yRatio = DPI_HEIGHT / (yMax - yMin)
-    const xRatio = DPI_WIDTH / (data.columns[0].length - 2)
+
+    const yRatio = computeYRatio(DPI_HEIGHT, yMax, yMin)
+    const xRatio = computeXRatio(DPI_WIDTH, data.columns[0].length)
 
     const yData = data.columns.filter(col => data.types[col[0]] === 'line')
 
-    yData.map(toCoords(xRatio, yRatio, DPI_HEIGHT, -5)).forEach((coords, idx) => {
+    yData.map(toCoords(xRatio, yRatio, DPI_HEIGHT, 0, yMin)).forEach((coords, idx) => {
         const color = data.colors[yData[idx][0]]
-        line(ctx, coords, {color})
+        line(ctx, coords, { color })
     })
+
+    return {
+        subscribe(fn) {
+            nextFn = fn
+            fn(getPosition())
+        }
     }
-  }
+}
